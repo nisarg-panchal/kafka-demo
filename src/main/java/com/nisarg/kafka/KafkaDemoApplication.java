@@ -1,5 +1,6 @@
 package com.nisarg.kafka;
 
+import com.nisarg.kafka.bean.Company;
 import com.nisarg.kafka.bean.Person;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClientConfig;
@@ -18,6 +19,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,10 +39,10 @@ public class KafkaDemoApplication {
         return new KafkaAdmin.NewTopics(
                 TopicBuilder.name("defaultBoth")
                         .build(),
-                TopicBuilder.name("defaultPart")
+                TopicBuilder.name("peopleTopic")
                         .replicas(1)
                         .build(),
-                TopicBuilder.name("defaultRepl")
+                TopicBuilder.name("companyTopic")
                         .partitions(3)
                         .build());
     }
@@ -71,7 +73,7 @@ public class KafkaDemoApplication {
                 .build();
     }
 
-    @KafkaListener(id = "myId", topics = "demoTopic")
+    @KafkaListener(id = "myId", topics = {"peopleTopic", "companyTopic"})
     public void listen(String in) {
         log.info("Received message: {}", in);
     }
@@ -87,9 +89,20 @@ public class KafkaDemoApplication {
     }
 
     @Bean
-    public KafkaTemplate<String, Person> kafkaTemplate() {
+    public KafkaTemplate<String, Person> kafkaTemplatePerson() {
         KafkaTemplate<String, Person> kafkaTemplate = new KafkaTemplate<>(producerFactory());
-        kafkaTemplate.setDefaultTopic("demoTopic");
+        kafkaTemplate.setDefaultTopic("peopleTopic");
         return kafkaTemplate;
     }
+
+    @Bean
+    public KafkaTemplate<String, Company> kafkaTemplateCompany() {
+        KafkaTemplate<String, Company> kafkaTemplate = new KafkaTemplate<>(
+                new DefaultKafkaProducerFactory<>(producerConfigs()),
+                Collections.singletonMap(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class));
+        kafkaTemplate.setDefaultTopic("companyTopic");
+        return kafkaTemplate;
+    }
+
+
 }
